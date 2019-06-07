@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+"""CLI for running TFE jobs."""
+import argparse
+import logging
+import os
+from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import urlretrieve
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.python.platform import gfile
+import tf_encrypted as tfe
+from tf_encrypted.protocol import Pond, SecureNN
+
+logging.basicConfig()
+logger = logging.getLogger('tf_encrypted')
+logger.setLevel(logging.DEBUG)
+
+enable_events_monitor = os.environ.get('TFE_MONITOR_EVENTS') is not None
+enable_traces = os.environ.get('TFE_TRACE') is not None
+enable_debug = os.environ.get('TFE_DEBUG') is not None
+
+tfe.set_tfe_events_flag(enable_events_monitor)
+tfe.set_tfe_trace_flag(enable_traces)
+tfe.set_tfe_debug_flag(enable_debug)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--protocol_name", type=str, default='securenn',
+                    help="Protocol name")
+parser.add_argument("--model_name", type=str, default='', help="Model name")
+parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
+parser.add_argument("--model_url", type=str, default='',
+                    help="Model's public URL")
+parser.add_argument("--input_file", type=str, default="",
+                    help="Load the data from a numpy file format (.npy)")
+parser.add_argument("--data_dir", type=str, default="",
+                    help="Data directory with TFRecords file only")
+parser.add_argument("--plaintext", action='store_true',
+                    help="Run the model in plaintext")
+parser.add_argument("--iterations", type=int, default=10,
+                    help="Number of times to run a prediction")
+config = parser.parse_args()
+
+if config.protocol_name == 'securenn':
+  tfe.set_protocol(SecureNN())
+else:
+  tfe.set_protocol(Pond())
+
+model_file = config.model_name
+model_path = Path(model_file)
+
+if not model_path.is_file() and config.model_url:
+  def is_valid_url(url, qualifying=None):
+    qualifying = ('scheme', 'netloc') if qualifying is None else qualifying
+    token = urlparse(url)
+    return all([getattr(token, qualifying_attr)
+                for qualifying_attr in qualifying])
+
+  if is_valid_url(config.model_url):
+    print('Downloading model from URL: {}'.format(config.model_url))
+    model_file, _ = urlretrieve(config.model_url)
+  else:
+    raise Exception('Invalid URL given: {}'.format(config.model_url))
+
+tf.reset_default_graph()
+
+input_spec = []
+with gfile.GFile(model_file, 'rb') as f:
+  print('Loading model: {}'.format(model_file))
+  graph_def = tf.GraphDef()
+  graph_def.ParseFromString(f.read())
+
+  for node in graph_def.node:
+    if node.op != "Placeholder":
+      continue
+
+    not_batch = [int(d.size) for d in node.attr['shape'].shape.dim[1:]]
+    input_shape = [config.batch_size] + not_batch
+
+    input_spec.append({
+        'name': node.name,
+        'dtype': node.attr['dtype'].type,
+        'shape': input_shape
+    })
+
+inputs = []
+
+for i, spec in enumerate(input_spec):
+
+  def scope(provider_index, spec_in: dict):
+    def provide_input() -> tf.Tensor:
+      pl = tf.placeholder(
+          tf.float32,
+          shape=spec_in['shape'],
+          name="api/{}".format(provider_index))
+      return pl
+    return provide_input
+
+  inputs.append(scope(i, spec))
+
+  if config.input_file:
+    # TODO: Currently this allows for only one input
+    # If we want to load models with multiple diffrent inputs
+    # We will need to save our inputs as a list of np.array
+    input_data = [np.load(config.input_file)]
+    err_msg = ("the input_data length ({}) should be equal to"
+                "the number of inputs required by"
+                "the loaded model ({})").format(len(input_data),
+                                                len(input_spec))
+    assert len(input_data) == len(input_spec), err_msg
+  else:
+    input_data = [np.random.standard_normal(spec['shape']).tolist()
+                  for spec in input_spec]
+
+
+runs = config.iterations
+if config.plaintext:
+  logger.info('running prediction in plaintext')
+  with tfe.Session() as sess:
+    sess.graph.as_default()
+    tf.import_graph_def(graph_def, name='')
+    sess.run(tf.global_variables_initializer())
+
+    # TODO This isn't a good way to get the input/output nodes and we
+    #      shouldn't hardcode the input either!
+    logger.info('running, {}, predictions'.format(runs))
+    for x in range(0, runs + 1): # first run is warmup
+      output = sess.graph.get_operations()[-2].values()[0]
+      x_input = sess.graph.get_operations()[0].values()[0]
+      output = sess.run(output, {x_input: input_data[0]}, tag='prediction')
+      if x % 10 == 0:
+        logger.info('prediction {} output: {}'.format(x, output))
+
+    logger.info('ran {} iterations'.format(x))
+
+else:
+  logger.info('running prediction securely')
+  c = tfe.convert.convert.Converter()
+  y = c.convert(graph_def, tfe.convert.registry(), 'input-provider', inputs)
+
+  def reveal_output(sess, y, feed_dict):
+    run_op = y.reveal()
+    return sess.run(run_op, feed_dict=feed_dict, tag='prediction')
+
+  pls = []
+  for i in range(len(input_spec)):
+    if i == 0:
+      name = "private-input/api/{}:0".format(i)
+    else:
+      name = "private-input_{}/api/{}:0".format(i, i)
+    pls.append(tf.get_default_graph().get_tensor_by_name(name))
+
+  feed_dict = {pl: input_data[i] for i, pl in enumerate(pls)}
+
+  with tfe.Session() as sess:
+    logger.info("initing!!!")
+    sess.run(tf.global_variables_initializer())
+    logger.info("warming up")
+    output = reveal_output(sess, y, feed_dict)
+    logger.info('warming up prediction output: {}'.format(output))
+
+    logger.info('running {} predictions'.format(runs))
+    for x in range(0, runs):
+      output = reveal_output(sess, y, feed_dict)
+      if x % 10 == 0:
+        logger.info('prediction {} output: {}'.format(x, output))
+
+    logger.info('{} iterations complete'.format(x))
+    logger.info('done')
