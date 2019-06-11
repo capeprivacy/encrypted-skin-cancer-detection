@@ -27,7 +27,7 @@ We recommend installing [Anaconda](https://docs.anaconda.com/anaconda/user-guide
 If you experience any issues installing fastai, you can consult the documentation [here](https://docs.fast.ai/).
 
 ## Run Private Predictions
-If you want, you can run a private prediction right away. We have saved the pb file containing the model weights and the neural network architecture here. We have also saved a pre-processed skin lesion image as a numpy file in this repo: `skin_cancer_image.npy`.
+If you want, you can run a private prediction right away. We have saved the pb file containing the model weights and the neural network architecture [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/skin_cancer_model.pb). We have also saved a pre-processed skin lesion image as a numpy file in this repo: `skin_cancer_image.npy`.
 
 To perform a private prediction locally, you can simply run  this in your terminal:
 ```
@@ -42,11 +42,11 @@ When running this command line, a TF Encrypted TensoFLow graph gets automaticall
 
 ## Training 
 
-After downloading the data from here, you can train the model by running the notebook `skincancer_vgg16like.ipynb`. The purpose of this model is to classify correctly the malignant skin lesions (Melanoma) images. For this project, we trained the model with the fastai library to quickly experiment with different architectures, data augmentation strategies, cyclical learning rates, etc. But of course this model could have been trained with TensorFLow. 
+After downloading the data from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip), you can train the model by running the notebook `skincancer_vgg16like.ipynb`. The purpose of this model is to classify correctly the malignant skin lesions (Melanoma) images. For this project, we trained the model with the fastai library to quickly experiment with different architectures, data augmentation strategies, cyclical learning rates, etc. But of course this model could have been trained with TensorFLow. 
 
 Once trained, the model gets exported to a pb file with the function `export_to_pb` from the utils file `transform_to_pb_file.py`. This function first transforms the PyTorch model into a TensorFlow graph then exports it to a pb file. 
 
 
 ## Data
 
-For this project, we have gathered 1,321 skin lesions images labeled as Melanona and 2,229 skin lesion images labeled as Nevi or Seborrheic Keratoses. This data were collected from the [2017 ISIC Challenge on Skin Lesion Analysis Towards Melanoma Detection](https://github.com/udacity/dermatologist-ai) and additional data where collected from [ISIC archive](https://isic-archive.com/#images) using the instructions [here](https://github.com/GalAvineri/ISIC-Archive-Downloader).
+For this project, we have gathered 1,321 skin lesions images labeled as Melanona and 2,229 skin lesion images labeled as Nevi or Seborrheic Keratoses. This data were collected from the [2017 ISIC Challenge on Skin Lesion Analysis Towards Melanoma Detection](https://github.com/udacity/dermatologist-ai) and additional data where collected from [ISIC archive](https://isic-archive.com/#images) using the instructions [here](https://github.com/GalAvineri/ISIC-Archive-Downloader). You can dowload the data used for this project from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip)
