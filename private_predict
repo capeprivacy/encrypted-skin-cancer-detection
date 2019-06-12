@@ -26,15 +26,15 @@ tfe.set_tfe_trace_flag(enable_traces)
 tfe.set_tfe_debug_flag(enable_debug)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--protocol_name", type=str, default='securenn',
+parser.add_argument("--model", "-m", type=str, help="Model filepath/URL")
+parser.add_argument("--protocol-name", "-p", type=str, default='securenn',
+                    choices=['securenn', 'pond']
                     help="Protocol name")
-parser.add_argument("--model_name", type=str, default='', help="Model name")
-parser.add_argument("--batch_size", type=int, default=1, help="Batch size")
-parser.add_argument("--model_url", type=str, default='',
-                    help="Model's public URL")
-parser.add_argument("--input_file", type=str, default="",
+parser.add_argument("--batch-size", "-b", type=int, default=1,
+                    help="Batch size")
+parser.add_argument("--input-file", type=str, default="",
                     help="Load the data from a numpy file format (.npy)")
-parser.add_argument("--data_dir", type=str, default="",
+parser.add_argument("--data-dir", type=str, default="",
                     help="Data directory with TFRecords file only")
 parser.add_argument("--plaintext", action='store_true',
                     help="Run the model in plaintext")
@@ -47,21 +47,21 @@ if config.protocol_name == 'securenn':
 else:
   tfe.set_protocol(Pond())
 
-model_file = config.model_name
+model_file = config.model
 model_path = Path(model_file)
 
-if not model_path.is_file() and config.model_url:
+if not model_path.is_file() and config.model:
   def is_valid_url(url, qualifying=None):
     qualifying = ('scheme', 'netloc') if qualifying is None else qualifying
     token = urlparse(url)
     return all([getattr(token, qualifying_attr)
                 for qualifying_attr in qualifying])
 
-  if is_valid_url(config.model_url):
-    print('Downloading model from URL: {}'.format(config.model_url))
-    model_file, _ = urlretrieve(config.model_url)
+  if is_valid_url(config.model):
+    logger.info('Downloading model from URL: %s', config.model)
+    model_file, _ = urlretrieve(config.model)
   else:
-    raise Exception('Invalid URL given: {}'.format(config.model_url))
+    raise Exception('Invalid filename/URL given for model: {}'.format(config.model))
 
 tf.reset_default_graph()
 
