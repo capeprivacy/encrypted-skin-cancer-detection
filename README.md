@@ -61,3 +61,5 @@ Once trained, the model gets exported to a protobuf file with the function `expo
 ## Data
 
 For this project, we have gathered 1,321 skin lesions images labeled as Melanona and 2,229 skin lesion images labeled as Nevi or Seborrheic Keratoses. This data were collected from the [2017 ISIC Challenge on Skin Lesion Analysis Towards Melanoma Detection](https://github.com/udacity/dermatologist-ai) and additional data where collected from [ISIC archive](https://isic-archive.com/#images) using the instructions [here](https://github.com/GalAvineri/ISIC-Archive-Downloader). You can download the data used for this project from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip).
+
+>Codella N, Gutman D, Celebi ME, Helba B, Marchetti MA, Dusza S, Kalloo A, Liopyris K, Mishra N, Kittler H, Halpern A. "Skin Lesion Analysis Toward Melanoma Detection: A Challenge at the 2017 International Symposium on Biomedical Imaging (ISBI), Hosted by the International Skin Imaging Collaboration (ISIC)". arXiv: 1710.05006 [cs.CV] Available: https://arxiv.org/abs/1710.05006>
