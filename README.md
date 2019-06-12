@@ -1,20 +1,20 @@
-# Encrypted Skin Cancer Detection 
+# Encrypted Skin Cancer Detection
 
 ## Project Overview
 
 The purpose of this project is to demonstrate how simple it is to provide encrypted skin cancer detection with [TF Encrypted](https://github.com/tf-encrypted/tf-encrypted). We released this code in the context of the blog post "A Path to Sub-Second, Encrypted Skin Cancer Detection".
 
 Only three steps are required to provide private predictions:
-- Train your deep learning model with the framework of your choice. 
-- Export the model to a [protocol buffer file (pb)](https://www.tensorflow.org/guide/extend/model_files#protocol_buffers).
-- Load the pb file in TF Encrypted to start serving private predictions. 
+- Train your deep learning model with the framework of your choice.
+- Export the model to a [protocol buffer file (protobuf)](https://www.tensorflow.org/guide/extend/model_files#protocol_buffers).
+- Load the protobuf in TF Encrypted to start serving private predictions.
 
 ## Install
 
 This project requires **Python 3.6** and the following Python libraries installed:
 
 - [TF Encrypted](https://github.com/tf-encrypted/tf-encrypted)
-- [TensorFlow](https://github.com/tensorflow/tensorflow) 
+- [TensorFlow](https://github.com/tensorflow/tensorflow)
 - [fastai](https://github.com/fastai/fastai)
 
 You can easily install these libraries with:
@@ -22,31 +22,42 @@ You can easily install these libraries with:
 pip install -r requirements.txt
 ```
 
-We recommend installing [Anaconda](https://docs.anaconda.com/anaconda/user-guide/getting-started/), a pre-packaged Python distribution that contains all of the necessary libraries and software for this project.
+We recommend installing [Anaconda](https://docs.anaconda.com/anaconda/user-guide/getting-started/), a pre-packaged Python distribution that can be used to install and manage all of the necessary libraries and software for this project.
 
-If you experience any issues installing fastai, you can consult the documentation [here](https://docs.fast.ai/).
+If you experience any issues installing fastai, you can consult the [documentation](https://docs.fast.ai/).
 
 ## Run Private Predictions
-If you want, you can run a private prediction right away. We have saved the pb file containing the model weights and the neural network architecture [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/skin_cancer_model.pb). We have also saved a pre-processed skin lesion image as a numpy file in this repo: `skin_cancer_image.npy`.
+If you want, you can run a private prediction right away. We supply a protobuf containing the model weights and the neural network architecture in this [GCS storage bucket](https://storage.googleapis.com/tfe-examples-data/skin_cancer/skin_cancer_model.pb). For demonstration purposes, we also provide a pre-processed skin lesion image as a pickled Numpy array: `skin_cancer_image.npy`.
 
-To perform a private prediction locally, you can simply run  this in your terminal:
+To perform a private prediction locally, you can simply run this command in your terminal:
 ```
+MODEL_URL=https://storage.googleapis.com/tfe-examples-data/skin_cancer/skin_cancer_model.pb
 ./private_predict --protocol_name securenn \
-      --model_name skin_cancer_model.pb \
-      --input_file skin_cancer_image.npy \
-      --batch_size 1 \
+      --model $MODEL_URL \
+      --input-file skin_cancer_image.npy \
+      --batch-size 1 \
       --iterations 1
 ```
 
-When running this command line, a TF Encrypted TensoFLow graph gets automatically created based on the pb file. During this process the model weights and input data gets secret shared. 
+Alternatively, you can download the protobuf manually and supply it directly to the CLI:
+```
+./private_predict --protocol_name securenn \
+      --model skin_cancer_model.pb \
+      --input-file skin_cancer_image.npy \
+      --batch-size 1 \
+      --iterations 1
+```
 
-## Training 
 
-After downloading the data from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip), you can train the model by running the notebook `skincancer_vgg16like.ipynb`. The purpose of this model is to classify correctly the malignant skin lesions (Melanoma) images. For this project, we trained the model with the fastai library to quickly experiment with different architectures, data augmentation strategies, cyclical learning rates, etc. But of course this model could have been trained with TensorFLow. 
+When running this command, a TF Encrypted graph is automatically created using the GraphDef inside the supplied protobuf. The original model weights are secret shared during this conversion process. Finally, data provided through the `--input-file` arg is secret shared before the model performs the secure inference.
 
-Once trained, the model gets exported to a pb file with the function `export_to_pb` from the utils file `transform_to_pb_file.py`. This function first transforms the PyTorch model into a TensorFlow graph then exports it to a pb file. 
+## Training
+
+After downloading the data from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip), you can train the model by running the notebook `training.ipynb`. The purpose of this model is to classify correctly the malignant skin lesions (Melanoma) images. For this project, we trained the model with the [fastai library](https://github.com/fastai/fastai) to quickly experiment with different architectures, data augmentation strategies, cyclical learning rates, etc. This was mainly due to the availability of the cyclical learning rate finder -- training with TensorFlow, Keras, or a library like [tensor2tensor](https://github.com/tensorflow/tensor2tensor) is usually preferred.
+
+Once trained, the model gets exported to a protobuf file with the function `export_to_pb` from the utility file `transform_to_pb.py`. This function first transforms the PyTorch model into a TensorFlow graph and then exports it to protobuf.
 
 
 ## Data
 
-For this project, we have gathered 1,321 skin lesions images labeled as Melanona and 2,229 skin lesion images labeled as Nevi or Seborrheic Keratoses. This data were collected from the [2017 ISIC Challenge on Skin Lesion Analysis Towards Melanoma Detection](https://github.com/udacity/dermatologist-ai) and additional data where collected from [ISIC archive](https://isic-archive.com/#images) using the instructions [here](https://github.com/GalAvineri/ISIC-Archive-Downloader). You can dowload the data used for this project from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip)
+For this project, we have gathered 1,321 skin lesions images labeled as Melanona and 2,229 skin lesion images labeled as Nevi or Seborrheic Keratoses. This data were collected from the [2017 ISIC Challenge on Skin Lesion Analysis Towards Melanoma Detection](https://github.com/udacity/dermatologist-ai) and additional data where collected from [ISIC archive](https://isic-archive.com/#images) using the instructions [here](https://github.com/GalAvineri/ISIC-Archive-Downloader). You can download the data used for this project from [here](https://storage.googleapis.com/tfe-examples-data/skin_cancer/data.zip).
