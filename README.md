@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The purpose of this project is to demonstrate how simple it is to provide encrypted skin cancer detection with [TF Encrypted](https://github.com/tf-encrypted/tf-encrypted). We released this code in the context of the blog post "A Path to Sub-Second, Encrypted Skin Cancer Detection".
+The purpose of this project is to demonstrate how simple it is to provide encrypted skin cancer detection with [TF Encrypted](https://github.com/tf-encrypted/tf-encrypted). We released this code in the context of the blog post [A Path to Sub-Second, Encrypted Skin Cancer Detection](https://medium.com/dropoutlabs/encrypted-skin-cancer-detection-3d096d3b7237).
 
 Only three steps are required to provide private predictions:
 - Train your deep learning model with the framework of your choice.
