@@ -1,3 +1,5 @@
 fastai==1.0.51
 tensorflow==1.15.0
 tf_encrypted>=0.5.4<=0.5.5
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
+wheel>=0.38.0 # not directly required, pinned by Snyk to avoid a vulnerability
